@@ -1,3 +1,4 @@
+<b>Note:</b><h1>keep all the files in folder name " facebook_pixel " to show this module in whmcs admin  and there is no "</h1> 
 # Whmcs-Facebook-Pixel-addon
 Facebook pixel in whmcs for free just install and enjoy 
  To install the addon 
