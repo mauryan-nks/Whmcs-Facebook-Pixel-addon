@@ -7,8 +7,8 @@ function facebook_pixel_config()
 {
     $config = [
     	'name' => 'Facebook Pixel',
-    	'description' => ' Add Facebook Pixel',
-    	'version' => 'sncoms.7&2',
+    	'description' => ' Add Facebook Pixel Code',
+    	'version' => 'sncoms.77',
     	'author' => 'Sinhcoms LLP',
     	'language' => 'english',
     	'fields' => [
