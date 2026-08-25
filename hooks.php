@@ -6,34 +6,20 @@ if (!defined('WHMCS')) {
     exit('This file cannot be accessed directly');
 }
 
+require_once __DIR__ . '/lib/firebase_mfa.php';
+
 add_hook('ClientAreaHeadOutput', 1, 'facebook_pixel_hook_base');
 add_hook('ShoppingCartViewCartOutput', 1, 'facebook_pixel_hook_addtocart');
 add_hook('ShoppingCartCheckoutOutput', 1, 'facebook_pixel_hook_checkout');
+add_hook('ClientAreaPage', 1, 'facebook_pixel_hook_enforce_firebase_mfa');
+add_hook('UserLogout', 1, 'facebook_pixel_hook_clear_firebase_mfa');
 
 /**
  * Return the configured Meta Pixel ID after strict validation.
- *
- * Meta Pixel IDs are numeric. Rejecting anything else prevents stored
- * configuration values from being injected into generated JavaScript/HTML.
  */
 function facebook_pixel_get_id(): ?string
 {
-    try {
-        $pixel = Capsule::table('tbladdonmodules')
-            ->where('module', 'facebook_pixel')
-            ->where('setting', 'code')
-            ->value('value');
-    } catch (\Throwable $e) {
-        logModuleCall('facebook_pixel', 'read_pixel_id', [], $e->getMessage());
-        return null;
-    }
-
-    if (!is_string($pixel)) {
-        return null;
-    }
-
-    $pixel = trim(explode('|', $pixel, 2)[0]);
-
+    $pixel = facebook_pixel_get_setting('code');
     if ($pixel === '' || !preg_match('/^[0-9]{5,30}$/', $pixel)) {
         return null;
     }
@@ -79,11 +65,7 @@ HTML;
 function facebook_pixel_hook_addtocart($vars): string
 {
     $products = $vars['cart']['products'] ?? [];
-    if (!is_array($products) || $products === []) {
-        return '';
-    }
-
-    if (facebook_pixel_get_id() === null) {
+    if (!is_array($products) || $products === [] || facebook_pixel_get_id() === null) {
         return '';
     }
 
@@ -100,4 +82,38 @@ function facebook_pixel_hook_checkout($vars): string
     }
 
     return "<script>if (typeof fbq === 'function') { fbq('track', 'InitiateCheckout'); }</script>";
+}
+
+/**
+ * Gate the authenticated client area until Firebase phone verification succeeds.
+ * WHMCS performs the primary credential authentication first; this addon only
+ * adds a second factor and never accepts Firebase as a replacement password.
+ */
+function facebook_pixel_hook_enforce_firebase_mfa($vars): array
+{
+    if (!facebook_pixel_firebase_mfa_enabled()) {
+        return [];
+    }
+
+    $clientId = (int) ($_SESSION['uid'] ?? 0);
+    if ($clientId < 1 || facebook_pixel_mfa_is_verified($clientId)) {
+        return [];
+    }
+
+    $modulePage = isset($_GET['m']) && (string) $_GET['m'] === 'facebook_pixel';
+    $filename = strtolower((string) ($vars['filename'] ?? ''));
+    $logoutPage = in_array($filename, ['logout', 'dologout'], true);
+
+    if ($modulePage || $logoutPage) {
+        return [];
+    }
+
+    facebook_pixel_mark_mfa_pending($clientId);
+    header('Location: index.php?m=facebook_pixel');
+    exit;
+}
+
+function facebook_pixel_hook_clear_firebase_mfa($vars): void
+{
+    facebook_pixel_clear_mfa_session();
 }
