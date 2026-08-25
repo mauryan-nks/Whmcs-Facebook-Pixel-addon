@@ -1,7 +1,5 @@
 <?php
 
-use WHMCS\Database\Capsule;
-
 if (!defined('WHMCS')) {
     exit('This file cannot be accessed directly');
 }
@@ -12,6 +10,7 @@ add_hook('ClientAreaHeadOutput', 1, 'facebook_pixel_hook_base');
 add_hook('ShoppingCartViewCartOutput', 1, 'facebook_pixel_hook_addtocart');
 add_hook('ShoppingCartCheckoutOutput', 1, 'facebook_pixel_hook_checkout');
 add_hook('ClientAreaPage', 1, 'facebook_pixel_hook_enforce_firebase_mfa');
+add_hook('UserLogin', 1, 'facebook_pixel_hook_reset_firebase_mfa');
 add_hook('UserLogout', 1, 'facebook_pixel_hook_clear_firebase_mfa');
 
 /**
@@ -111,6 +110,14 @@ function facebook_pixel_hook_enforce_firebase_mfa($vars): array
     facebook_pixel_mark_mfa_pending($clientId);
     header('Location: index.php?m=facebook_pixel');
     exit;
+}
+
+/**
+ * A fresh WHMCS login must always perform a fresh second-factor challenge.
+ */
+function facebook_pixel_hook_reset_firebase_mfa($vars): void
+{
+    facebook_pixel_clear_mfa_session();
 }
 
 function facebook_pixel_hook_clear_firebase_mfa($vars): void
