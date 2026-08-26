@@ -15,7 +15,7 @@ function facebook_pixel_config(): array
         'name' => 'Meta Pixel + Firebase MFA',
         'description' => 'Adds Meta Pixel ecommerce events and optional Firebase SMS OTP MFA to the WHMCS client area.',
         'version' => '2.1.0',
-        'author' => 'Sinhcoms LLP / Nayan',
+        'author' => 'Vismrit.tech / Nayan',
         'language' => 'english',
         'fields' => [
             'code' => [
